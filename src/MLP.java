@@ -1,4 +1,6 @@
+import java.lang.reflect.Array;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Random;
 
 public class MLP {
@@ -13,6 +15,9 @@ public class MLP {
     double[][] layerBiases;
 
     double[][] layerOutputs;
+
+    double[][][] layerWeightsHistory;
+    double[][] layerBiasesHistory;
 
     //relu function
     public static double relu(double x){
@@ -64,6 +69,11 @@ public class MLP {
         }
         this.layerWeights = weights;
         this.layerBiases = biases;
+        //create deep copies of the weights and biases for the history
+
+
+        this.layerWeightsHistory = Arrays.copyOf(weights, weights.length);
+        this.layerBiasesHistory = Arrays.copyOf(biases, biases.length);
 
     }
 
@@ -150,6 +160,17 @@ public class MLP {
             }
         }
 
+        //save the weights and biases to update them at the end of the epoch
+        for(int i = 0; i < layerWeightsHistory.length; i++){
+            for(int j = 0; j < layerWeightsHistory[i].length; j++){
+                for(int k = 0; k < layerWeightsHistory[i][j].length; k++){
+                    layerWeightsHistory[i][j][k] += learningRate * outputLayerErrors[i][j] * (i == 0 ? input[k] : layerOutputs[i-1][k]);
+                }
+                layerBiasesHistory[i][j] += learningRate * outputLayerErrors[i][j];
+            }
+        }
+
+/*
         //update the weights and biases
         for(int i = 0; i < layerWeights.length; i++){
             for(int j = 0; j < layerWeights[i].length; j++){
@@ -159,7 +180,7 @@ public class MLP {
                 layerBiases[i][j] += learningRate * outputLayerErrors[i][j];
             }
         }
-
+*/
     }
     //train the network
     public void train(ArrayList<Example> exampleList, int epochs){
@@ -184,6 +205,129 @@ public class MLP {
             }
         }
     }
+
+    public void trainBatch(ArrayList<Example> exampleList, int epochs, int batchNumber){
+
+
+        int batchSize = exampleList.size()/batchNumber;
+        int step = 0;
+        for(int i = 0; i < epochs; i++){
+            //cheat
+            if(step == exampleList.size()){
+                step = 0;
+            }
+
+
+            for(int j = 0; j < step + batchSize && j < exampleList.size(); j++){
+                Example example = exampleList.get(j);
+
+                Category category = example.category;
+                double[] input = {example.x1, example.x2};
+
+
+                if(category.equals(Category.C1)){
+                    double[] expectedOutput = new double[] {1, 0, 0};
+                    backPropagation(input, expectedOutput);
+                }
+                else if(category.equals(Category.C2)){
+                    double[] expectedOutput = new double[]  {0, 1, 0};
+                    backPropagation(input, expectedOutput);
+                }
+                else if(category.equals(Category.C3)){
+                    double[] expectedOutput = new double[]  {0, 0, 1};
+                    backPropagation(input, expectedOutput);
+                }
+            }
+
+
+            step += batchSize;
+            updateWeightsAndBiases(exampleList.size()/batchNumber);
+/*
+            double sum = 0;
+            for(int j = 0; j < step + batchSize && j < exampleList.size(); j++){
+
+                Example example = exampleList.get(j);
+
+                Category category = example.category;
+                double[] input = {example.x1, example.x2};
+
+                if(category.equals(Category.C1)){
+                    double[] expectedOutput = new double[] {1, 0, 0};
+                    forwardPropagation(input);
+                    sum += calculateMeanSquaredErrorForOutputs(expectedOutput);
+                }
+                else if(category.equals(Category.C2)){
+                    double[] expectedOutput = new double[]  {0, 1, 0};
+                    forwardPropagation(input);
+                    sum += calculateMeanSquaredErrorForOutputs(expectedOutput);
+                }
+                else if(category.equals(Category.C3)){
+                    double[] expectedOutput = new double[]  {0, 0, 1};
+                    forwardPropagation(input);
+                    sum += calculateMeanSquaredErrorForOutputs(expectedOutput);
+                }
+            }
+            double err = sum;*/
+            System.out.println("Epoch: " + i + " with Error: " );
+
+        }
+    }
+
+    public void testMLP(ArrayList<Example> testExampleList)
+    {
+        int correct = 0;
+        for(int i = 0; i < testExampleList.size(); i++){
+            Example example = testExampleList.get(i);
+            Category category = example.category;
+            double[] input = {example.x1, example.x2};
+            forwardPropagation(input);
+            double[] output = layerOutputs[layerOutputs.length-1];
+            double max = 0;
+            int maxIndex = 0;
+            for(int j = 0; j < output.length; j++){
+                if(output[j] > max){
+                    max = output[j];
+                    maxIndex = j;
+                }
+            }
+            if(maxIndex == 0 && category.equals(Category.C1)){
+                correct++;
+            }
+            else if(maxIndex == 1 && category.equals(Category.C2)){
+                correct++;
+            }
+            else if(maxIndex == 2 && category.equals(Category.C3)){
+                correct++;
+            }
+        }
+        System.out.println("Accuracy: " + (double)correct/testExampleList.size());
+    }
+
+    public double calculateMeanSquaredErrorForOutputs(double[] expectedOutput)
+    {
+        double sum = 0;
+        for(int i = 0; i < layerOutputs[layerOutputs.length-1].length; i++){
+            sum += Math.pow(layerOutputs[layerOutputs.length-1][i] - expectedOutput[i], 2);
+            //System.out.println("diff:  " + (layerOutputs[layerOutputs.length-1][i] - expectedOutput[i]));
+        }
+        return 1.0/2.0 * sum/layerOutputs[layerOutputs.length-1].length;
+    }
+
+
+    private void updateWeightsAndBiases(int numberOfExamplesInBatch) {
+        for(int i = 0; i < layerWeights.length; i++){
+            for(int j = 0; j < layerWeights[i].length; j++){
+                for(int k = 0; k < layerWeights[i][j].length; k++){
+                    layerWeights[i][j][k] = layerWeightsHistory[i][j][k]; /// numberOfExamplesInBatch;
+                }
+                layerBiases[i][j] = layerBiasesHistory[i][j]; /// numberOfExamplesInBatch;
+            }
+        }
+    }
+
+
+    //train with batches
+
     double squaredErrorDerivative(double actual, double expected){
         return (expected - actual);
     }
@@ -210,7 +354,7 @@ public class MLP {
     }
 
     public static void main(String[] args) {
-        MLP mlp = new MLP( 2, new int[]{10,10,10,3}, "relu", 0.01, 0.1);
+        MLP mlp = new MLP( 2, new int[]{20,20,20,3}, "relu", 0.01, 0.1);
 
         //this is not permanent, just for testing
         double testX = 0.5;
@@ -228,13 +372,6 @@ public class MLP {
         double testX4 = -0.5;
         double testY4 = -0.7;
 
-
-        //double[] output = mlp.forwardPropagation(new double[]{testX, testY});
-
-        //for(int i = 0; i < output.length; i++){
-        //    System.out.println(output[i]);
-        //}
-
         DataSet dataSet = new DataSet();
         dataSet.createExamples(8000, 8000);
         System.out.println(dataSet.categorizeExample(testX,testY));
@@ -242,9 +379,9 @@ public class MLP {
         System.out.println(dataSet.categorizeExample(testX2,testY2));
         System.out.println(dataSet.categorizeExample(testX3,testY3));
         System.out.println(dataSet.categorizeExample(testX4,testY4));
-
-        mlp.train(dataSet.learningExamples, 100);
-
+        mlp.testMLP(dataSet.testExamples);
+        mlp.trainBatch(dataSet.learningExamples, 700, 8);
+        mlp.testMLP(dataSet.testExamples);
 
         double[] output2 = mlp.forwardPropagation(new double[]{testX, testY});
 
