@@ -206,13 +206,10 @@ public class MLP {
         }
     }
 
-    public void trainBatch(ArrayList<Example> exampleList, int epochs, int batchSize){
-
-
-       // int batchSize = exampleList.size()/batchNumber;
+    public void trainBatch(ArrayList<Example> exampleList, int epochs, int batchCount){
+        int batchSize = exampleList.size()/batchCount;
         int step = 0;
         for(int i = 0; i < epochs; i++){
-            //cheat
             if(step == exampleList.size()){
                 step = 0;
             }
@@ -222,7 +219,6 @@ public class MLP {
 
                 Category category = example.category;
                 double[] input = {example.x1, example.x2};
-
 
                 if(category.equals(Category.C1)){
                     double[] expectedOutput = new double[] {1, 0, 0};
@@ -285,7 +281,7 @@ public class MLP {
             double max = 0;
             int maxIndex = 0;
             for(int j = 0; j < output.length; j++){
-                if(output[j] > max ){//testing only && output[j] >= 0.9){
+                if(output[j] > max ){//testing only --> && output[j] >= 0.9){
                     max = output[j];
                     maxIndex = j;
                 }
@@ -308,11 +304,9 @@ public class MLP {
         double sum = 0;
         for(int i = 0; i < layerOutputs[layerOutputs.length-1].length; i++){
             sum += Math.pow(expectedOutput[i] - layerOutputs[layerOutputs.length-1][i], 2);
-            //System.out.println("diff:  " + (layerOutputs[layerOutputs.length-1][i] - expectedOutput[i]));
         }
         return 1.0/2.0 * sum/layerOutputs[layerOutputs.length-1].length;
     }
-
 
     private void updateWeightsAndBiases(int numberOfExamplesInBatch) {
         for(int i = 0; i < layerWeights.length; i++){
@@ -324,9 +318,6 @@ public class MLP {
             }
         }
     }
-
-
-    //train with batches
 
     double squaredErrorDerivative(double actual, double expected){
         return (expected - actual);
@@ -348,71 +339,24 @@ public class MLP {
         return x * (1 - x);// out * (1 - out)
     }
 
-    // sigmoid function
     public double sigmoid(double x){
         return 1 / (1 + Math.exp(-x));
     }
 
     public static void main(String[] args) {
-        MLP mlp = new MLP( 2, new int[]{20,20,20,3}, "relu", 0.01, 0.1);
-
-        //this is not permanent, just for testing
-        double testX = 0.5;
-        double testY = 0.7;
-
-        double testX1 = -0.6;
-        double testY1 = 0.7;
-
-        double testX2 = 0.9;
-        double testY2 = -0.87;
-
-        double testX3 = 0.5;
-        double testY3 = -0.7;
-
-        double testX4 = -0.5;
-        double testY4 = -0.7;
+        //outputs don't really have weights therefore they are not included in the layerWeights array
+        //note tanh is slower than relu
+        //the output layer uses the sigmoid activation function
+        MLP mlp = new MLP( 2, new int[]{20,20,20,3}, "relu", 0.01, 0.001);
 
         DataSet dataSet = new DataSet();
         dataSet.createExamples(4000, 4000);
-        System.out.println(dataSet.categorizeExample(testX,testY));
-        System.out.println(dataSet.categorizeExample(testX1,testY1));
-        System.out.println(dataSet.categorizeExample(testX2,testY2));
-        System.out.println(dataSet.categorizeExample(testX3,testY3));
-        System.out.println(dataSet.categorizeExample(testX4,testY4));
+
         mlp.testMLP(dataSet.testExamples);
-        mlp.trainBatch(dataSet.learningExamples, 1000, 400);
+        mlp.trainBatch(dataSet.learningExamples, 1000, 10);
         mlp.testMLP(dataSet.testExamples);
-        mlp.testMLP(dataSet.learningExamples);
 
-        double[] output2 = mlp.forwardPropagation(new double[]{testX, testY});
-
-        for(int i = 0; i < output2.length; i++){
-            System.out.println(output2[i]);
-        }
-        System.out.println();
-        double[] output3 = mlp.forwardPropagation(new double[]{testX1, testY1});
-
-        for(int i = 0; i < output3.length; i++){
-            System.out.println(output3[i]);
-        }
-        System.out.println();
-        double[] output4 = mlp.forwardPropagation(new double[]{testX2, testY2});
-
-        for(int i = 0; i < output4.length; i++){
-            System.out.println(output4[i]);
-        }
-        System.out.println();
-        double[] output5 = mlp.forwardPropagation(new double[]{testX3, testY3});
-
-        for(int i = 0; i < output5.length; i++){
-            System.out.println(output5[i]);
-        }
-        System.out.println();
-        double[] output6 = mlp.forwardPropagation(new double[]{testX4, testY4});
-
-        for(int i = 0; i < output6.length; i++){
-            System.out.println(output6[i]);
-        }
+        //mlp.testMLP(dataSet.learningExamples);
 
     }
 }
