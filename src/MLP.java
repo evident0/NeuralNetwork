@@ -92,12 +92,12 @@ public class MLP {
         //create the hidden layer outputs
         double[][] layerOutputs = new double[layerWeights.length][];
 
-        for(int layer = 0; layer < layerWeights.length; layer++){//how many layers is hiddenlayerweights
+        for(int layer = 0; layer < layerWeights.length; layer++){
             layerOutputs[layer] = new double[layerWeights[layer].length];
-            for(int node = 0; node < layerWeights[layer].length; node++){//how many nodes in each layer
+            for(int node = 0; node < layerWeights[layer].length; node++){
                 double sum = 0;
-                for(int weight = 0; weight < layerWeights[layer][node].length; weight++){//how many weights in each node
-                    sum += layerWeights[layer][node][weight] * (layer == 0 ? input[weight] : layerOutputs[layer - 1][weight]);//go to the previous layer and get the output for node k
+                for(int weight = 0; weight < layerWeights[layer][node].length; weight++){
+                    sum += layerWeights[layer][node][weight] * (layer == 0 ? input[weight] : layerOutputs[layer - 1][weight]);
                 }
                 sum += layerBiases[layer][node];
                 if(layer == layerWeights.length-1){
@@ -170,46 +170,11 @@ public class MLP {
             }
         }
 
-/*
-        //update the weights and biases
-        for(int i = 0; i < layerWeights.length; i++){
-            for(int j = 0; j < layerWeights[i].length; j++){
-                for(int k = 0; k < layerWeights[i][j].length; k++){
-                    layerWeights[i][j][k] += learningRate * outputLayerErrors[i][j] * (i == 0 ? input[k] : layerOutputs[i-1][k]);
-                }
-                layerBiases[i][j] += learningRate * outputLayerErrors[i][j];
-            }
-        }
-*/
     }
-    //train the network
-    public void train(ArrayList<Example> exampleList, int epochs){
-        for(int i = 0; i < epochs; i++){
-            for(int j = 0; j < exampleList.size(); j++){
-                Example example = exampleList.get(j);
-                Category category = example.category;
-                double[] input = {example.x1, example.x2};
-
-                if(category.equals(Category.C1)){
-                    double[] expectedOutput = {1, 0, 0};
-                    backPropagation(input, expectedOutput);
-                }
-                else if(category.equals(Category.C2)){
-                    double[] expectedOutput = {0, 1, 0};
-                    backPropagation(input, expectedOutput);
-                }
-                else if(category.equals(Category.C3)){
-                    double[] expectedOutput = {0, 0, 1};
-                    backPropagation(input, expectedOutput);
-                }
-            }
-        }
-    }
-
     public void trainBatch(ArrayList<Example> exampleList, int epochs, int batchCount){
         int batchSize = exampleList.size()/batchCount;
         int step = 0;
-        for(int i = 0; i < epochs; i++){
+        for(int i = 0;; i++){
             if(step == exampleList.size()){
                 step = 0;
             }
@@ -260,9 +225,15 @@ public class MLP {
                     sum += calculateMeanSquaredErrorForOutputs(expectedOutput);
                 }
             }
+
             double err = sum/batchSize;
             System.out.println("Epoch: " + i + " with Error: "+ err);
 
+            if (i >= epochs-1 && err <= lowerBound){
+
+                break;
+
+            }
 
             step += batchSize;
 
@@ -347,13 +318,13 @@ public class MLP {
         //outputs don't really have weights therefore they are not included in the layerWeights array
         //note tanh is slower than relu
         //the output layer uses the sigmoid activation function
-        MLP mlp = new MLP( 2, new int[]{20,20,20,3}, "relu", 0.01, 0.001);
+        MLP mlp = new MLP( 2, new int[]{20,20,20,3}, "relu", 0.01, 0.01);
 
         DataSet dataSet = new DataSet();
         dataSet.createExamples(4000, 4000);
 
         mlp.testMLP(dataSet.testExamples);
-        mlp.trainBatch(dataSet.learningExamples, 1000, 10);
+        mlp.trainBatch(dataSet.learningExamples, 700, 10);
         mlp.testMLP(dataSet.testExamples);
 
         //mlp.testMLP(dataSet.learningExamples);
