@@ -14,7 +14,7 @@ public class Driver {
 
     public static void main(String[] args) {
 
-        NeuralNetwork nn = new NeuralNetwork(2,40,3);
+        NeuralNetwork nn = new NeuralNetwork(2,100,3);
 
 
         double testX = -0.6;
@@ -33,7 +33,7 @@ public class Driver {
        // double testY2 = 0.8;
 
         DataSet dataSet = new DataSet();
-        dataSet.createExamples(4000, 4000);
+        dataSet.createExamples(8000, 8000);
         System.out.println(dataSet.categorizeExample(testX,testY));
         System.out.println(dataSet.categorizeExample(testX2,testY2));
         System.out.println(dataSet.categorizeExample(testX3,testY3));

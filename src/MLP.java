@@ -206,10 +206,10 @@ public class MLP {
         }
     }
 
-    public void trainBatch(ArrayList<Example> exampleList, int epochs, int batchNumber){
+    public void trainBatch(ArrayList<Example> exampleList, int epochs, int batchSize){
 
 
-        int batchSize = exampleList.size()/batchNumber;
+       // int batchSize = exampleList.size()/batchNumber;
         int step = 0;
         for(int i = 0; i < epochs; i++){
             //cheat
@@ -217,8 +217,7 @@ public class MLP {
                 step = 0;
             }
 
-
-            for(int j = 0; j < step + batchSize && j < exampleList.size(); j++){
+            for(int j = step; j < step + batchSize && j < exampleList.size(); j++){
                 Example example = exampleList.get(j);
 
                 Category category = example.category;
@@ -238,37 +237,38 @@ public class MLP {
                     backPropagation(input, expectedOutput);
                 }
             }
+
+            updateWeightsAndBiases(exampleList.size()/batchSize);
+
+            double sum = 0;
+            for(int j = step; j < step + batchSize && j < exampleList.size(); j++){
+
+                Example example = exampleList.get(j);
+
+                Category category = example.category;
+                double[] input = {example.x1, example.x2};
+
+                if(category.equals(Category.C1)){
+                    double[] expectedOutput = new double[] {1, 0, 0};
+                    forwardPropagation(input);
+                    sum += calculateMeanSquaredErrorForOutputs(expectedOutput);
+                }
+                else if(category.equals(Category.C2)){
+                    double[] expectedOutput = new double[]  {0, 1, 0};
+                    forwardPropagation(input);
+                    sum += calculateMeanSquaredErrorForOutputs(expectedOutput);
+                }
+                else if(category.equals(Category.C3)){
+                    double[] expectedOutput = new double[]  {0, 0, 1};
+                    forwardPropagation(input);
+                    sum += calculateMeanSquaredErrorForOutputs(expectedOutput);
+                }
+            }
+            double err = sum/batchSize;
+            System.out.println("Epoch: " + i + " with Error: "+ err);
 
 
             step += batchSize;
-            updateWeightsAndBiases(exampleList.size()/batchNumber);
-/*
-            double sum = 0;
-            for(int j = 0; j < step + batchSize && j < exampleList.size(); j++){
-
-                Example example = exampleList.get(j);
-
-                Category category = example.category;
-                double[] input = {example.x1, example.x2};
-
-                if(category.equals(Category.C1)){
-                    double[] expectedOutput = new double[] {1, 0, 0};
-                    forwardPropagation(input);
-                    sum += calculateMeanSquaredErrorForOutputs(expectedOutput);
-                }
-                else if(category.equals(Category.C2)){
-                    double[] expectedOutput = new double[]  {0, 1, 0};
-                    forwardPropagation(input);
-                    sum += calculateMeanSquaredErrorForOutputs(expectedOutput);
-                }
-                else if(category.equals(Category.C3)){
-                    double[] expectedOutput = new double[]  {0, 0, 1};
-                    forwardPropagation(input);
-                    sum += calculateMeanSquaredErrorForOutputs(expectedOutput);
-                }
-            }
-            double err = sum;*/
-            System.out.println("Epoch: " + i + " with Error: " );
 
         }
     }
@@ -285,7 +285,7 @@ public class MLP {
             double max = 0;
             int maxIndex = 0;
             for(int j = 0; j < output.length; j++){
-                if(output[j] > max){
+                if(output[j] > max ){//testing only && output[j] >= 0.9){
                     max = output[j];
                     maxIndex = j;
                 }
@@ -307,7 +307,7 @@ public class MLP {
     {
         double sum = 0;
         for(int i = 0; i < layerOutputs[layerOutputs.length-1].length; i++){
-            sum += Math.pow(layerOutputs[layerOutputs.length-1][i] - expectedOutput[i], 2);
+            sum += Math.pow(expectedOutput[i] - layerOutputs[layerOutputs.length-1][i], 2);
             //System.out.println("diff:  " + (layerOutputs[layerOutputs.length-1][i] - expectedOutput[i]));
         }
         return 1.0/2.0 * sum/layerOutputs[layerOutputs.length-1].length;
@@ -373,15 +373,16 @@ public class MLP {
         double testY4 = -0.7;
 
         DataSet dataSet = new DataSet();
-        dataSet.createExamples(8000, 8000);
+        dataSet.createExamples(4000, 4000);
         System.out.println(dataSet.categorizeExample(testX,testY));
         System.out.println(dataSet.categorizeExample(testX1,testY1));
         System.out.println(dataSet.categorizeExample(testX2,testY2));
         System.out.println(dataSet.categorizeExample(testX3,testY3));
         System.out.println(dataSet.categorizeExample(testX4,testY4));
         mlp.testMLP(dataSet.testExamples);
-        mlp.trainBatch(dataSet.learningExamples, 700, 8);
+        mlp.trainBatch(dataSet.learningExamples, 1000, 400);
         mlp.testMLP(dataSet.testExamples);
+        mlp.testMLP(dataSet.learningExamples);
 
         double[] output2 = mlp.forwardPropagation(new double[]{testX, testY});
 
