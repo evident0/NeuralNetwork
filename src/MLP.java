@@ -140,8 +140,7 @@ public class MLP {
 
         for(int out = 0; out < outputLayerErrors[outputLayerErrors.length-1].length; out++){
             outputLayerErrors[outputLayerErrors.length-1][out] = squaredErrorDerivative(layerOutputs[layerOutputs.length-1][out], expectedOutput[out])
-                    * sigmoidDerivative(layerOutputs[layerOutputs.length-1][out]); //* layerOutputs[layerOutputs.length-2][out];
-            //thetaE/thetaw = (expected - actual) * sigmoidDerivative(actual) where sigmoidDerivative = (actual(1-actual))
+                    * sigmoidDerivative(layerOutputs[layerOutputs.length-1][out]);
         }
 
         //calculate the error for the hidden layers
@@ -251,6 +250,9 @@ public class MLP {
             double[] output = layerOutputs[layerOutputs.length-1];
             double max = 0;
             int maxIndex = 0;
+            // we choose the maximum regardless of the confidence level
+            // although we could choose the maximum only if it is above a certain threshold
+            // the accuracy would not change much
             for(int j = 0; j < output.length; j++){
                 if(output[j] > max ){//testing only --> && output[j] >= 0.9){
                     max = output[j];
@@ -259,12 +261,19 @@ public class MLP {
             }
             if(maxIndex == 0 && category.equals(Category.C1)){
                 correct++;
+                System.out.println("(+) " + example.x1 + " " + example.x2 + " " + category);
             }
             else if(maxIndex == 1 && category.equals(Category.C2)){
                 correct++;
+                System.out.println("(+) " + example.x1 + " " + example.x2 + " " + category);
             }
             else if(maxIndex == 2 && category.equals(Category.C3)){
                 correct++;
+                System.out.println("(+) " + example.x1 + " " + example.x2 + " " + category);
+            }
+            else{
+                System.out.println("(-) " + example.x1 + " " + example.x2 + " guess: " +
+                        ((maxIndex == 0) ? Category.C1 : (maxIndex == 1) ? Category.C2 : Category.C3 + " actual: " + category));
             }
         }
         System.out.println("Accuracy: " + (double)correct/testExampleList.size());
@@ -318,7 +327,7 @@ public class MLP {
         //outputs don't really have weights therefore they are not included in the layerWeights array
         //note tanh is slower than relu
         //the output layer uses the sigmoid activation function
-        MLP mlp = new MLP( 2, new int[]{20,20,20,3}, "relu", 0.01, 0.01);
+        MLP mlp = new MLP( 2, new int[]{30,30,30,3}, "relu", 0.01, 0.01);
 
         DataSet dataSet = new DataSet();
         dataSet.createExamples(4000, 4000);
