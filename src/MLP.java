@@ -14,7 +14,7 @@ public class MLP {
     double[][][] layerWeights;
     double[][] layerBiases;
 
-    double[][] layerOutputs;
+    double[][] layerOutputs;//TODO: this should probably not be a class variable
 
     double[][][] layerWeightsHistory;
     double[][] layerBiasesHistory;
@@ -139,12 +139,15 @@ public class MLP {
         }
 
         for(int out = 0; out < outputLayerErrors[outputLayerErrors.length-1].length; out++){
+            // the below calculates delta = (y - t) * f'(z(i))
             outputLayerErrors[outputLayerErrors.length-1][out] = squaredErrorDerivative(layerOutputs[layerOutputs.length-1][out], expectedOutput[out])
                     * sigmoidDerivative(layerOutputs[layerOutputs.length-1][out]);
+
         }
 
         //calculate the error for the hidden layers
         for(int i = outputLayerErrors.length-2; i >= 0; i--){
+            //the below calculates delta(i) = delta(i+1) * w(i+1) * f'(z(i))
             for(int j = 0; j < outputLayerErrors[i].length; j++){
                 double sum = 0;
                 for(int k = 0; k < outputLayerErrors[i+1].length; k++){
@@ -163,9 +166,9 @@ public class MLP {
         for(int i = 0; i < layerWeightsHistory.length; i++){
             for(int j = 0; j < layerWeightsHistory[i].length; j++){
                 for(int k = 0; k < layerWeightsHistory[i][j].length; k++){
-                    layerWeightsHistory[i][j][k] += learningRate * outputLayerErrors[i][j] * (i == 0 ? input[k] : layerOutputs[i-1][k]);
+                    layerWeightsHistory[i][j][k] -= learningRate * outputLayerErrors[i][j] * (i == 0 ? input[k] : layerOutputs[i-1][k]); // h * delta * output(i-1)
                 }
-                layerBiasesHistory[i][j] += learningRate * outputLayerErrors[i][j];
+                layerBiasesHistory[i][j] -= learningRate * outputLayerErrors[i][j];
             }
         }
 
@@ -300,7 +303,7 @@ public class MLP {
     }
 
     double squaredErrorDerivative(double actual, double expected){
-        return (expected - actual);
+        return (actual - expected);
     }
     double reluDerivative(double x){
         if(x > 0){
