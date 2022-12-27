@@ -173,7 +173,8 @@ public class MLP {
         }
 
     }
-    public void trainBatch(ArrayList<Example> exampleList, int epochs, int batchCount){
+    public ArrayList<Double> trainBatch(ArrayList<Example> exampleList, int epochs, int batchCount){
+        ArrayList<Double> errorList = new ArrayList<Double>();
         int batchSize = exampleList.size()/batchCount;
         int step = 0;
         for(int i = 0;; i++){
@@ -229,6 +230,7 @@ public class MLP {
             }
 
             double err = sum/batchSize;
+            errorList.add(err);
             System.out.println("Epoch: " + i + " with Error: "+ err);
 
             if (i >= epochs-1 && err <= lowerBound){
@@ -240,6 +242,7 @@ public class MLP {
             step += batchSize;
 
         }
+        return errorList;
     }
 
     public void testMLP(ArrayList<Example> testExampleList)
@@ -336,7 +339,8 @@ public class MLP {
         dataSet.createExamples(4000, 4000);
 
         mlp.testMLP(dataSet.testExamples);
-        mlp.trainBatch(dataSet.learningExamples, 700, 10);
+        ArrayList<Double> errorList = mlp.trainBatch(dataSet.learningExamples, 700, 10);
+        FileManager.writeArrayToFile(errorList, "errorList.txt");
         mlp.testMLP(dataSet.testExamples);
 
         //mlp.testMLP(dataSet.learningExamples);
