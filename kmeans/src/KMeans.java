@@ -77,17 +77,19 @@ public class KMeans {
         }
 
         //calculate euclidian distance
+        euclDistance = 0;
         for(int i=0;i<centers;i++){
             for(Example element: groups.get(i)){
                 double[] point = {element.x1, element.x2};
-                euclDistance+=Math.pow(distance(point,currentCenters[i]),2);
+                euclDistance+=distance(point,currentCenters[i]);
             }
         }
         return returnDistances; //stop contition for while loop
     }
 
     private double distance(double[] point1, double[] point2){
-        return Math.sqrt(Math.abs(Math.pow((point1[0]-point2[0]),2)+Math.pow((point1[1]-point2[1]),2)));
+        double distance =  Math.sqrt(Math.abs(Math.pow((point1[0]-point2[0]),2)+Math.pow((point1[1]-point2[1]),2)));
+        return distance;
     }
 
 
