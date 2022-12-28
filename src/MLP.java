@@ -1,6 +1,7 @@
 import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Random;
 
 public class MLP {
@@ -10,6 +11,8 @@ public class MLP {
 
     int numberOfInputs;
     int numberOfOutputs;
+
+    int batchSize;
 
     double[][][] layerWeights;
     double[][] layerBiases;
@@ -213,10 +216,82 @@ public class MLP {
         System.out.println("Invalid activation function defaulting to sigmoid derivative");
         return  sigmoidDerivative(x);
     }
+
+    private ArrayList<ArrayList<Example>> createBatches(ArrayList<Example> examples, int batchSize){
+        //suffle the examples list
+        Collections.shuffle(examples);
+        //split the examples into batches
+        ArrayList<ArrayList<Example>> batches = new ArrayList<>();
+        for(int i = 0; i < examples.size(); i += batchSize){
+            batches.add(new ArrayList<>(examples.subList(i, Math.min(i + batchSize, examples.size()))));
+        }
+        return batches;
+    }
+
+    private double[] oneHotEncode(Category category){
+
+        if(category.equals(Category.C1)){
+            return new double[] {1, 0, 0};
+        }
+        else if(category.equals(Category.C2)){
+            return new double[]  {0, 1, 0};
+        }
+        else if(category.equals(Category.C3)){
+            return new double[]  {0, 0, 1};
+        }
+        else{
+
+            System.err.println("Invalid category");
+            return new double[]  {0, 0, 0};
+
+        }
+    }
+
     //TODO one epoch == examples/batch_size number of iterations
     public ArrayList<Double> trainBatch(ArrayList<Example> exampleList, int epochs, int batchCount){
+
+        ArrayList<Double> errorList = new ArrayList<>();
+        int batchSize = exampleList.size()/batchCount;
+
+        //for number of epochs
+        for(int i = 0; i < epochs; i++){
+
+            ArrayList<ArrayList<Example>> batches = new ArrayList<>();
+            batches = createBatches(exampleList, batchCount);
+            double error = 0;
+
+            for(ArrayList<Example> batch: batches){
+                for(Example example: batch){
+
+                    Category category = example.category;
+                    double[] input = {example.x1, example.x2};
+                    double[] expectedOutput = oneHotEncode(category);
+                    backPropagation(input, expectedOutput);
+
+                }
+
+                updateWeightsAndBiases();
+
+                for(Example example: batch){
+
+                    Category category = example.category;
+                    double[] input = {example.x1, example.x2};
+                    double[] expectedOutput = oneHotEncode(category);
+                    forwardPropagation(input);
+                    error += calculateMeanSquaredErrorForOutputs(expectedOutput);
+                }
+
+                error = error/batchSize;
+                errorList.add(error);
+                System.out.println("Epoch: " + i + " with Error: "+ error);
+
+            }
+        }
+        return errorList;
+        /*
         ArrayList<Double> errorList = new ArrayList<Double>();
         int batchSize = exampleList.size()/batchCount;
+        this.batchSize = batchSize;
         int step = 0;
         for(int i = 0;; i++){
             if(step == exampleList.size()){
@@ -283,7 +358,7 @@ public class MLP {
             step += batchSize;
 
         }
-        return errorList;
+        return errorList;*/
     }
 
     public void testMLP(ArrayList<Example> testExampleList)
@@ -386,7 +461,7 @@ public class MLP {
         dataSet.createExamples(4000, 4000);
 
         mlp.testMLP(dataSet.testExamples);
-        ArrayList<Double> errorList = mlp.trainBatch(dataSet.learningExamples, 100000, 100);
+        ArrayList<Double> errorList = mlp.trainBatch(dataSet.learningExamples, 700, 100);
         FileManager.writeArrayToFile(errorList, "errorList.txt");
         mlp.testMLP(dataSet.testExamples);
         FileManager.writeArrayToFile(dataSet.testExamples, "testDatasetResults.txt");
