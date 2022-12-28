@@ -250,7 +250,7 @@ public class MLP {
     //TODO one epoch == examples/batch_size number of iterations
     public ArrayList<Double> trainBatch(ArrayList<Example> exampleList, int epochs, int batchCount){
 
-        ArrayList<Double> errorList = new ArrayList<>();
+        ArrayList<Double> epochErrorList = new ArrayList<>();
         int batchSize = exampleList.size()/batchCount;
 
         //for number of epochs
@@ -258,9 +258,14 @@ public class MLP {
 
             ArrayList<ArrayList<Example>> batches = new ArrayList<>();
             batches = createBatches(exampleList, batchCount);
-            double error = 0;
+
+            ArrayList<Double> batchErrorList = new ArrayList<>();
+
 
             for(ArrayList<Example> batch: batches){
+
+                double batchError = 0;
+
                 for(Example example: batch){
 
                     Category category = example.category;
@@ -278,16 +283,28 @@ public class MLP {
                     double[] input = {example.x1, example.x2};
                     double[] expectedOutput = oneHotEncode(category);
                     forwardPropagation(input);
-                    error += calculateMeanSquaredErrorForOutputs(expectedOutput);
+                    batchError += calculateMeanSquaredErrorForOutputs(expectedOutput);
                 }
 
-                error = error/batchSize;
-                errorList.add(error);
-                System.out.println("Epoch: " + i + " with Error: "+ error);
+
+                batchError = batchError/batchSize;
+                //epochErrorList.add(batchError);
+                batchErrorList.add(batchError);
+                //System.out.println("Epoch: " + i + " with Error: "+ batchError);
 
             }
+
+            //find the average value of the batch error list
+            double epochError = 0;
+            for(double error: batchErrorList){
+                epochError += error;
+            }
+            epochError = epochError/batchCount;
+            epochErrorList.add(epochError);
+            System.out.println("Epoch: " + i + " with Error: "+ epochError);
+
         }
-        return errorList;
+        return epochErrorList;
         /*
         ArrayList<Double> errorList = new ArrayList<Double>();
         int batchSize = exampleList.size()/batchCount;
@@ -411,7 +428,7 @@ public class MLP {
         for(int i = 0; i < layerOutputs[layerOutputs.length-1].length; i++){
             sum += Math.pow(expectedOutput[i] - layerOutputs[layerOutputs.length-1][i], 2);
         }
-        return 1.0/2.0 * sum/layerOutputs[layerOutputs.length-1].length;
+        return sum/layerOutputs[layerOutputs.length-1].length;
     }
 
 
