@@ -19,18 +19,9 @@ public class MLP {
     double[][][] layerWeightsHistory;
     double[][] layerBiasesHistory;
 
-    //relu function
-    public static double relu(double x){
-        return Math.max(0, x);
-    }
-    //tanH function
-    public static double tanH(double x){
-        return Math.tanh(x);
-    }
-
     //create a constructor that takes in the number of inputs, number of hidden nodes , and number of outputs
     public MLP(int numberOfInputs, int[] layers, String activationFunction, double learningRate, double lowerBound){//activation function is relu or tanH
-
+/*
         if(activationFunction.equals("relu")){
             this.activationFunction = "relu";
         }
@@ -40,7 +31,8 @@ public class MLP {
         else{
             System.out.println("Invalid activation function");
         }
-
+*/
+        this.activationFunction = activationFunction;
         this.learningRate = learningRate;
         this.lowerBound = lowerBound;
         this.numberOfInputs = numberOfInputs;
@@ -48,9 +40,9 @@ public class MLP {
 
 
         //create and initialize the weights and biases to a random number between -1 and 1
-        Random random = new Random(348758934);
-        double max = 1.0;
-        double min = -1.0;
+        Random random = new Random();
+        double max = 1;
+        double min = -1;
 
         //create the weights and biases for the hidden layers
         double[][][] weights = new double[layers.length][][];
@@ -64,7 +56,7 @@ public class MLP {
                 for(int k = 0; k < weights[i][j].length; k++){
                     weights[i][j][k] = min + (max - min) * random.nextDouble();
                 }
-                biases[i][j] = min + (max - min) * random.nextDouble();
+                biases[i][j] = 0.0;//min + (max - min) * random.nextDouble();
             }
         }
         this.layerWeights = weights;
@@ -100,18 +92,24 @@ public class MLP {
                     sum += layerWeights[layer][node][weight] * (layer == 0 ? input[weight] : layerOutputs[layer - 1][weight]);
                 }
                 sum += layerBiases[layer][node];
-                if(layer == layerWeights.length-1){
+                if(layer == layerWeights.length-1){//output layer
 
-                    output[node] = sigmoid(sum);
+                    output[node] = activationFunction("sigmoid", sum);//sigmoid(sum);
                     layerOutputs[layer][node] = output[node];
 
                 }
+                else{
+
+                    layerOutputs[layer][node] = activationFunction(activationFunction, sum);
+
+                }
+                /*
                 else if(activationFunction.equals("relu")){
                     layerOutputs[layer][node] = relu(sum);
                 }
                 else if(activationFunction.equals("tanH")){
                     layerOutputs[layer][node] = tanH(sum);
-                }
+                }*/
             }
         }
         this.layerOutputs = layerOutputs;
@@ -141,7 +139,8 @@ public class MLP {
         for(int out = 0; out < outputLayerErrors[outputLayerErrors.length-1].length; out++){
             // the below calculates delta = (y - t) * f'(z(i))
             outputLayerErrors[outputLayerErrors.length-1][out] = squaredErrorDerivative(layerOutputs[layerOutputs.length-1][out], expectedOutput[out])
-                    * sigmoidDerivative(layerOutputs[layerOutputs.length-1][out]);
+                    * activationFunctionDerivative("sigmoid", layerOutputs[layerOutputs.length-1][out]);
+            //sigmoidDerivative(layerOutputs[layerOutputs.length-1][out]);
 
         }
 
@@ -153,12 +152,14 @@ public class MLP {
                 for(int k = 0; k < outputLayerErrors[i+1].length; k++){
                     sum += outputLayerErrors[i+1][k] * layerWeights[i+1][k][j];
                 }
+                outputLayerErrors[i][j] = sum * activationFunctionDerivative(activationFunction, layerOutputs[i][j]);
+                /*
                 if(activationFunction.equals("relu")){
                     outputLayerErrors[i][j] = sum * reluDerivative(layerOutputs[i][j]);
                 }
                 else if(activationFunction.equals("tanH")){
                     outputLayerErrors[i][j] = sum * tanHDerivative(layerOutputs[i][j]);
-                }
+                }*/
             }
         }
 
@@ -173,6 +174,46 @@ public class MLP {
         }
 
     }
+
+    private void updateWeightsAndBiases() {
+        for(int i = 0; i < layerWeights.length; i++){
+            for(int j = 0; j < layerWeights[i].length; j++){
+                for(int k = 0; k < layerWeights[i][j].length; k++){
+                    layerWeights[i][j][k] = layerWeightsHistory[i][j][k]; /// numberOfExamplesInBatch;
+                }
+                layerBiases[i][j] = layerBiasesHistory[i][j]; /// numberOfExamplesInBatch;
+            }
+        }
+    }
+
+    private double activationFunction(String function, double x){
+        if (function.equals("sigmoid")){
+            return sigmoid(x);
+        }
+        else if (function.equals("relu")){
+            return relu(x);
+        }
+        else if (function.equals("tanH")){
+            return tanH(x);
+        }
+        System.out.println("Invalid activation function defaulting to sigmoid");
+        return  sigmoid(x);
+    }
+
+    private double activationFunctionDerivative(String function, double x){
+        if (function.equals("sigmoid")){
+            return sigmoidDerivative(x);
+        }
+        else if (function.equals("relu")){
+            return reluDerivative(x);
+        }
+        else if (function.equals("tanH")){
+            return tanHDerivative(x);
+        }
+        System.out.println("Invalid activation function defaulting to sigmoid derivative");
+        return  sigmoidDerivative(x);
+    }
+    //TODO one epoch == examples/batch_size number of iterations
     public ArrayList<Double> trainBatch(ArrayList<Example> exampleList, int epochs, int batchCount){
         ArrayList<Double> errorList = new ArrayList<Double>();
         int batchSize = exampleList.size()/batchCount;
@@ -202,7 +243,7 @@ public class MLP {
                 }
             }
 
-            updateWeightsAndBiases(exampleList.size()/batchSize);
+            updateWeightsAndBiases();
 
             double sum = 0;
             for(int j = step; j < step + batchSize && j < exampleList.size(); j++){
@@ -267,19 +308,23 @@ public class MLP {
             }
             if(maxIndex == 0 && category.equals(Category.C1)){
                 correct++;
+                example.setIsCorrect(true);
                 System.out.println("(+) " + example.x1 + " " + example.x2 + " " + category);
             }
             else if(maxIndex == 1 && category.equals(Category.C2)){
                 correct++;
+                example.setIsCorrect(true);
                 System.out.println("(+) " + example.x1 + " " + example.x2 + " " + category);
             }
             else if(maxIndex == 2 && category.equals(Category.C3)){
                 correct++;
+                example.setIsCorrect(true);
                 System.out.println("(+) " + example.x1 + " " + example.x2 + " " + category);
             }
             else{
+                example.setIsCorrect(false);
                 System.out.println("(-) " + example.x1 + " " + example.x2 + " guess: " +
-                        ((maxIndex == 0) ? Category.C1 : (maxIndex == 1) ? Category.C2 : Category.C3 + " actual: " + category));
+                        (((maxIndex == 0) ? Category.C1 : (maxIndex == 1) ? Category.C2 : Category.C3) + " actual: " + category));
             }
         }
         System.out.println("Accuracy: " + (double)correct/testExampleList.size());
@@ -294,20 +339,21 @@ public class MLP {
         return 1.0/2.0 * sum/layerOutputs[layerOutputs.length-1].length;
     }
 
-    private void updateWeightsAndBiases(int numberOfExamplesInBatch) {
-        for(int i = 0; i < layerWeights.length; i++){
-            for(int j = 0; j < layerWeights[i].length; j++){
-                for(int k = 0; k < layerWeights[i][j].length; k++){
-                    layerWeights[i][j][k] = layerWeightsHistory[i][j][k]; /// numberOfExamplesInBatch;
-                }
-                layerBiases[i][j] = layerBiasesHistory[i][j]; /// numberOfExamplesInBatch;
-            }
-        }
+
+
+    //relu function
+    public static double relu(double x){
+        return Math.max(0, x);
+    }
+    //tanH function
+    public static double tanH(double x){
+        return Math.tanh(x);
     }
 
-    double squaredErrorDerivative(double actual, double expected){
-        return (actual - expected);
+    public double sigmoid(double x){
+        return 1 / (1 + Math.exp(-x));
     }
+
     double reluDerivative(double x){
         if(x > 0){
             return 1;
@@ -325,25 +371,28 @@ public class MLP {
         return x * (1 - x);// out * (1 - out)
     }
 
-    public double sigmoid(double x){
-        return 1 / (1 + Math.exp(-x));
+    double squaredErrorDerivative(double actual, double expected){
+        return (actual - expected);
     }
+
 
     public static void main(String[] args) {
         //outputs don't really have weights therefore they are not included in the layerWeights array
         //note tanh is slower than relu
         //the output layer uses the sigmoid activation function
-        MLP mlp = new MLP( 2, new int[]{30,30,30,3}, "relu", 0.01, 0.01);
+        MLP mlp = new MLP( 2, new int[]{10,10,10,3}, "relu", 0.001, 0.01);
 
         DataSet dataSet = new DataSet();
         dataSet.createExamples(4000, 4000);
 
         mlp.testMLP(dataSet.testExamples);
-        ArrayList<Double> errorList = mlp.trainBatch(dataSet.learningExamples, 700, 10);
+        ArrayList<Double> errorList = mlp.trainBatch(dataSet.learningExamples, 100000, 100);
         FileManager.writeArrayToFile(errorList, "errorList.txt");
         mlp.testMLP(dataSet.testExamples);
+        FileManager.writeArrayToFile(dataSet.testExamples, "testDatasetResults.txt");
 
         //mlp.testMLP(dataSet.learningExamples);
+        FileManager.writeArrayToFile(dataSet.learningExamples, "trainDatasetResults.txt");
 
     }
 }
