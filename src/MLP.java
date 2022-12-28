@@ -6,7 +6,7 @@ import java.util.Random;
 
 public class MLP {
     String activationFunction;
-    double lowerBound;
+
     double learningRate;
 
     int numberOfInputs;
@@ -17,27 +17,16 @@ public class MLP {
     double[][][] layerWeights;
     double[][] layerBiases;
 
-    double[][] layerOutputs;//TODO: this should probably not be a class variable
+    double[][] layerOutputs;
 
     double[][][] layerWeightsHistory;
     double[][] layerBiasesHistory;
 
     //create a constructor that takes in the number of inputs, number of hidden nodes , and number of outputs
-    public MLP(int numberOfInputs, int[] layers, String activationFunction, double learningRate, double lowerBound){//activation function is relu or tanH
-/*
-        if(activationFunction.equals("relu")){
-            this.activationFunction = "relu";
-        }
-        else if(activationFunction.equals("tanH")){
-            this.activationFunction = "tanH";
-        }
-        else{
-            System.out.println("Invalid activation function");
-        }
-*/
+    public MLP(int numberOfInputs, int[] layers, String activationFunction, double learningRate){//activation function is relu or tanH
+
         this.activationFunction = activationFunction;
         this.learningRate = learningRate;
-        this.lowerBound = lowerBound;
         this.numberOfInputs = numberOfInputs;
         this.numberOfOutputs = layers[layers.length-1];
 
@@ -106,13 +95,6 @@ public class MLP {
                     layerOutputs[layer][node] = activationFunction(activationFunction, sum);
 
                 }
-                /*
-                else if(activationFunction.equals("relu")){
-                    layerOutputs[layer][node] = relu(sum);
-                }
-                else if(activationFunction.equals("tanH")){
-                    layerOutputs[layer][node] = tanH(sum);
-                }*/
             }
         }
         this.layerOutputs = layerOutputs;
@@ -143,7 +125,6 @@ public class MLP {
             // the below calculates delta = (y - t) * f'(z(i))
             outputLayerErrors[outputLayerErrors.length-1][out] = squaredErrorDerivative(layerOutputs[layerOutputs.length-1][out], expectedOutput[out])
                     * activationFunctionDerivative("sigmoid", layerOutputs[layerOutputs.length-1][out]);
-            //sigmoidDerivative(layerOutputs[layerOutputs.length-1][out]);
 
         }
 
@@ -156,13 +137,6 @@ public class MLP {
                     sum += outputLayerErrors[i+1][k] * layerWeights[i+1][k][j];
                 }
                 outputLayerErrors[i][j] = sum * activationFunctionDerivative(activationFunction, layerOutputs[i][j]);
-                /*
-                if(activationFunction.equals("relu")){
-                    outputLayerErrors[i][j] = sum * reluDerivative(layerOutputs[i][j]);
-                }
-                else if(activationFunction.equals("tanH")){
-                    outputLayerErrors[i][j] = sum * tanHDerivative(layerOutputs[i][j]);
-                }*/
             }
         }
 
@@ -248,13 +222,13 @@ public class MLP {
     }
 
     //TODO one epoch == examples/batch_size number of iterations
-    public ArrayList<Double> trainBatch(ArrayList<Example> exampleList, int epochs, int batchCount){
+    public ArrayList<Double> trainBatch(ArrayList<Example> exampleList, int epochs, int batchCount, double threshold){
 
         ArrayList<Double> epochErrorList = new ArrayList<>();
         int batchSize = exampleList.size()/batchCount;
-
+        double previousEpochError = 0.0;
         //for number of epochs
-        for(int i = 0; i < epochs; i++){
+        for(int i = 0; ; i++){
 
             ArrayList<ArrayList<Example>> batches = new ArrayList<>();
             batches = createBatches(exampleList, batchCount);
@@ -300,82 +274,20 @@ public class MLP {
                 epochError += error;
             }
             epochError = epochError/batchCount;
+            // the error can go up as well due to the randomization of the batches
+            if(Math.max(epochError - previousEpochError, previousEpochError - epochError) < threshold
+                    && i >= epochs){ // if the error is less than the threshold and the number of epochs is reached
+                System.out.println("Epoch: " + i + " with Error: "+ epochError);
+                break;
+            }
+
+            previousEpochError = epochError;
+
             epochErrorList.add(epochError);
             System.out.println("Epoch: " + i + " with Error: "+ epochError);
 
         }
         return epochErrorList;
-        /*
-        ArrayList<Double> errorList = new ArrayList<Double>();
-        int batchSize = exampleList.size()/batchCount;
-        this.batchSize = batchSize;
-        int step = 0;
-        for(int i = 0;; i++){
-            if(step == exampleList.size()){
-                step = 0;
-            }
-
-            for(int j = step; j < step + batchSize && j < exampleList.size(); j++){
-                Example example = exampleList.get(j);
-
-                Category category = example.category;
-                double[] input = {example.x1, example.x2};
-
-                if(category.equals(Category.C1)){
-                    double[] expectedOutput = new double[] {1, 0, 0};
-                    backPropagation(input, expectedOutput);
-                }
-                else if(category.equals(Category.C2)){
-                    double[] expectedOutput = new double[]  {0, 1, 0};
-                    backPropagation(input, expectedOutput);
-                }
-                else if(category.equals(Category.C3)){
-                    double[] expectedOutput = new double[]  {0, 0, 1};
-                    backPropagation(input, expectedOutput);
-                }
-            }
-
-            updateWeightsAndBiases();
-
-            double sum = 0;
-            for(int j = step; j < step + batchSize && j < exampleList.size(); j++){
-
-                Example example = exampleList.get(j);
-
-                Category category = example.category;
-                double[] input = {example.x1, example.x2};
-
-                if(category.equals(Category.C1)){
-                    double[] expectedOutput = new double[] {1, 0, 0};
-                    forwardPropagation(input);
-                    sum += calculateMeanSquaredErrorForOutputs(expectedOutput);
-                }
-                else if(category.equals(Category.C2)){
-                    double[] expectedOutput = new double[]  {0, 1, 0};
-                    forwardPropagation(input);
-                    sum += calculateMeanSquaredErrorForOutputs(expectedOutput);
-                }
-                else if(category.equals(Category.C3)){
-                    double[] expectedOutput = new double[]  {0, 0, 1};
-                    forwardPropagation(input);
-                    sum += calculateMeanSquaredErrorForOutputs(expectedOutput);
-                }
-            }
-
-            double err = sum/batchSize;
-            errorList.add(err);
-            System.out.println("Epoch: " + i + " with Error: "+ err);
-
-            if (i >= epochs-1 && err <= lowerBound){
-
-                break;
-
-            }
-
-            step += batchSize;
-
-        }
-        return errorList;*/
     }
 
     public void testMLP(ArrayList<Example> testExampleList)
@@ -472,19 +384,23 @@ public class MLP {
         //outputs don't really have weights therefore they are not included in the layerWeights array
         //note tanh is slower than relu
         //the output layer uses the sigmoid activation function
-        MLP mlp = new MLP( 2, new int[]{10,10,10,3}, "relu", 0.001, 0.01);
+        MLP mlp = new MLP( 2, new int[]{20,20,20,3}, "relu", 0.001);
 
         DataSet dataSet = new DataSet();
         dataSet.createExamples(4000, 4000);
 
+        //before training
         mlp.testMLP(dataSet.testExamples);
-        ArrayList<Double> errorList = mlp.trainBatch(dataSet.learningExamples, 700, 100);
+
+        ArrayList<Double> errorList = mlp.trainBatch(dataSet.learningExamples, 700, 100, 0.001);
+
+        //after training
         FileManager.writeArrayToFile(errorList, "errorList.txt");
         mlp.testMLP(dataSet.testExamples);
         FileManager.writeArrayToFile(dataSet.testExamples, "testDatasetResults.txt");
 
         //mlp.testMLP(dataSet.learningExamples);
-        FileManager.writeArrayToFile(dataSet.learningExamples, "trainDatasetResults.txt");
+        //FileManager.writeArrayToFile(dataSet.learningExamples, "trainDatasetResults.txt");
 
     }
 }
