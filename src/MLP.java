@@ -381,10 +381,20 @@ public class MLP {
 
 
     public static void main(String[] args) {
+
+        int d = 2;
+        int H1 = 20;
+        int H2 = 20;
+        int H3 = 20;
+        int K = 3;
+        String activationFunction = "relu";
+        int batchCount = 100; // relates to B=N/batchCount
+
+
         //outputs don't really have weights therefore they are not included in the layerWeights array
         //note tanh is slower than relu
         //the output layer uses the sigmoid activation function
-        MLP mlp = new MLP( 2, new int[]{20,20,20,3}, "relu", 0.001);
+        MLP mlp = new MLP( d, new int[]{H1,H2,H3,K}, activationFunction, 0.001);
 
         DataSet dataSet = new DataSet();
         dataSet.createExamples(4000, 4000);
@@ -392,7 +402,7 @@ public class MLP {
         //before training
         mlp.testMLP(dataSet.testExamples);
 
-        ArrayList<Double> errorList = mlp.trainBatch(dataSet.learningExamples, 700, 100, 0.001);
+        ArrayList<Double> errorList = mlp.trainBatch(dataSet.learningExamples, 700, batchCount, 0.001);
 
         //after training
         FileManager.writeArrayToFile(errorList, "errorList.txt");
