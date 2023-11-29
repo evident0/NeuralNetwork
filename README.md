@@ -1,7 +1,4 @@
 # NeuralNetwork
-
-
-# community-detection
 # Description
 
 Neural network classifier for the undergraduate course υπολογιστική νοημοσύνη, University of Ioannina
